@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Interactiva | Preguntale a Indio</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-primary: #FAF7F2;
+            --bg-secondary: #F5EFE6;
+            --bg-tertiary: #EDE5D8;
+            --text-primary: #2D2A26;
+            --text-secondary: #5C5650;
+            --text-muted: #8A8279;
+            --accent-warm: #E30412;
+            --accent-earth: #B50310;
+            --accent-sage: #7D9181;
+            --accent-deep: #6B5B4F;
+            --border-soft: rgba(107, 91, 79, 0.15);
+            --shadow-soft: 0 4px 20px rgba(45, 42, 38, 0.08);
+            --shadow-medium: 0 8px 32px rgba(45, 42, 38, 0.12);
+            --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03; pointer-events: none; z-index: 0;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .question-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .question-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border-soft);
+            box-shadow: var(--shadow-soft);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 120px;
+        }
+
+        .question-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-warm);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .question-card h2 {
+            font-family: 'Fraunces', serif;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(45, 42, 38, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition-smooth);
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-medium);
+            transform: translateY(30px);
+            transition: var(--transition-smooth);
+            position: relative;
+        }
+
+        .overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            background: var(--bg-secondary);
+        }
+
+        .modal h3 {
+            font-family: 'Fraunces', serif;
+            font-size: 1.6rem;
+            color: var(--accent-warm);
+            margin-bottom: 1rem;
+        }
+
+        .modal p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .btn-close {
+            background: var(--accent-deep);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-family: 'Source Sans 3', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-close:hover { background: var(--text-primary); }
+
+        .backdoor-trigger {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 35px;
+            height: 35px;
+            background: var(--bg-tertiary);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            border: 1px solid var(--border-soft);
+            z-index: 200;
+            transition: var(--transition-smooth);
+        }
+
+        .backdoor-trigger:hover {
+            color: var(--accent-warm);
+            transform: rotate(90deg);
+        }
+
+        .side-panel {
+            position: fixed;
+            top: 0; right: -420px;
+            width: 400px;
+            height: 100vh;
+            background: white;
+            z-index: 300;
+            box-shadow: var(--shadow-medium);
+            padding: 2rem;
+            overflow-y: auto;
+            transition: var(--transition-smooth);
+            box-sizing: border-box;
+            border-left: 1px solid var(--border-soft);
+        }
+
+        .side-panel.open { right: 0; }
+
+        .side-panel h2 { font-family: 'Fraunces', serif; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-soft); padding-bottom: 0.5rem; }
+
+        .config-group {
+            background: var(--bg-primary);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-soft);
+        }
+
+        .config-group label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            color: var(--accent-sage);
+        }
+
+        .config-group input, .config-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-soft);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .btn-save {
+            width: 100%;
+            background: var(--accent-warm);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .btn-save:hover { background: var(--accent-earth); }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>Ind.IA</h1>
+            <p class="subtitle">Formula una pregunta e Indio te dara la respuesta</p>
+        </header>
+
+        <div class="question-grid" id="questionGrid"></div>
+    </div>
+
+    <div class="overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <img id="modalImg" class="modal-img" src="" alt="Imagen respuesta">
+            <h3 id="modalTitle"></h3>
+            <p id="modalBody"></p>
+            <button class="btn-close" onclick="closeModal()">Cerrar</button>
+        </div>
+    </div>
+
+    <div class="backdoor-trigger" onclick="toggleSettings()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </div>
+
+    <div class="side-panel" id="sidePanel">
+        <h2>Configuración</h2>
+        <div id="configContainer"></div>
+        <button class="btn-save" onclick="saveAndReload()">Guardar y Aplicar</button>
+        <button class="btn-save" style="background:var(--accent-deep); margin-top: 5px;" onclick="toggleSettings()">Cerrar</button>
+    </div>
+
+    <script>
+        const defaultImg = "https://palaciolibertad.gob.ar/wp-content/uploads/2019/12/gauvron_WEB.jpg";
+        const defaultData = [
+            { id: 0, q: "¿Que sucede cuando cuando confinamos una fuente sonora?", a: "Cuando al Sonido lo confinaste, cagaste Macho.", img: defaultImg },
+            { id: 1, q: "Pregunta", a: "Respuesta de Indio", img: defaultImg },
+            { id: 2, q: "Pregunta", a: "Respuesta de Indio", img: defaultImg },
+            { id: 3, q: "Pregunta", a: "Respuesta de Indio", img: defaultImg }
+        ];
+
+        let questions = JSON.parse(localStorage.getItem('qAppData')) || defaultData;
+
+        function renderUI() {
+            const grid = document.getElementById('questionGrid');
+            grid.innerHTML = '';
+            questions.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                card.onclick = () => openModal(item);
+                card.innerHTML = `<h2>${item.q}</h2>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function openModal(item) {
+            document.getElementById('modalImg').src = item.img;
+            document.getElementById('modalTitle').innerText = item.q;
+            document.getElementById('modalBody').innerText = item.a;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('sidePanel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) renderConfig();
+        }
+
+        function renderConfig() {
+            const container = document.getElementById('configContainer');
+            container.innerHTML = '';
+            questions.forEach((item, index) => {
+                const group = document.createElement('div');
+                group.className = 'config-group';
+                group.innerHTML = `
+                    <label>Modulo ${index + 1}</label>
+                    <input type="text" id="q-${index}" value="${item.q}">
+                    <textarea id="a-${index}" rows="2">${item.a}</textarea>
+                    <input type="text" id="img-${index}" value="${item.img}">
+                `;
+                container.appendChild(group);
+            });
+        }
+
+        function saveAndReload() {
+            const newQuestions = questions.map((item, index) => ({
+                id: index,
+                q: document.getElementById(`q-${index}`).value,
+                a: document.getElementById(`a-${index}`).value,
+                img: document.getElementById(`img-${index}`).value
+            }));
+
+            localStorage.setItem('qAppData', JSON.stringify(newQuestions));
+            questions = newQuestions;
+            renderUI();
+            toggleSettings();
+            alert("Cambios guardados correctamente");
+        }
+
+        renderUI();
+    </script>
+</body>
+</html>
